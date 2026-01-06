@@ -5,7 +5,6 @@ import Group from './Group';
 import Messenger from './Messenger';
 import Notification from './Notification';
 import Profile from './Profile';
-
 import { useAuth } from '../contexts/AuthContext';
 import { ChatBox } from '../components/chat/MessengerChat';
 import { GroupChatBox } from '../components/groups/GroupChatBox';
@@ -17,14 +16,15 @@ import RightSidebar from '../layouts/RightSidebar';
 import Header from '../layouts/Header';
 import LeftSidebar from '../layouts/LeftSidebar';
 import Loading from '../components/ui/loading';
-
-import { 
-    handlePrivateMessage, 
-} from '../../handlers/handlePrivateMessage';
+import { handlePrivateMessage } from '../../handlers/handlePrivateMessage';
+import src from '../api/src';
+import AudioGroup from '../components/AudioGroup';
 
 function VibeConnect() {
     const audioCallRef = useRef(null);
     const videoCallRef = useRef(null);
+    const groupCallRef = useRef(null);
+
     const notificationAudioRef = useRef(null);
     const openChatsRef = useRef([]);
 
@@ -48,7 +48,7 @@ function VibeConnect() {
         try {
             localStorage.setItem('openChats', JSON.stringify(openChats));
         } catch (error) {
-            console.error('❌ Lỗi khi lưu localStorage:', error);
+            console.error(' Lỗi khi lưu localStorage:', error);
         }
     }, [openChats]);
 
@@ -162,7 +162,6 @@ function VibeConnect() {
             const isChatOpen = openChatsRef.current.some(
                 chat => !chat.isGroup && Number(chat.id) === Number(senderId)
             );
-
             // Nếu chưa mở modal thì mở
             if (!isChatOpen) {
                 const friendData = {
@@ -179,8 +178,6 @@ function VibeConnect() {
                         : [...prev, friendData]
                 );
             }
-
-            // Bật âm thanh
             if (notificationAudioRef.current) {
                 notificationAudioRef.current.currentTime = 0;
                 notificationAudioRef.current.play().catch(() => {});
@@ -206,8 +203,6 @@ function VibeConnect() {
                 return Number(chatGroupId) === Number(groupId);
             });
 
-            console.log(`🔍 Modal chat group ${groupId} đã mở: ${isChatOpen}`);
-
             if (!isChatOpen) {
                 const groupInfo = conversations.find(conv => {
                     if (!conv.isGroup) return false;
@@ -224,7 +219,7 @@ function VibeConnect() {
                     avatar: groupInfo?.avatar || data.groupAvatar || '/group-icon.png',
                     memberCount: groupInfo?.memberCount || data.memberCount || 0,
                     isGroup: true,
-                    isMinimized: true // ✨ Mặc định minimize khi có tin nhắn mới
+                    isMinimized: true // Mặc định minimize khi có tin nhắn mới
                 };
                 
                 setOpenChats(prev => {
@@ -245,12 +240,7 @@ function VibeConnect() {
                 prev.map((conv) => {
                     // TH1: Mình đọc tin nhắn của người khác (readerId = mình, senderId = người kia)
                     // → Cập nhật conversation với người kia (conv.id = senderId)
-                    if (!conv.isGroup && 
-                        Number(readerId) === Number(user?.id) && 
-                        Number(conv.id) === Number(senderId)) {
-                        
-                        // console.log('✅ Mình đã đọc tin nhắn của:', conv.name);
-                        
+                    if (!conv.isGroup && Number(readerId) === Number(user?.id) && Number(conv.id) === Number(senderId)) { 
                         return {
                             ...conv,
                             is_read: true,
@@ -261,12 +251,7 @@ function VibeConnect() {
                     
                     // TH2: Người khác đọc tin nhắn của mình (readerId = người kia, senderId = mình)
                     // → Cập nhật conversation với người kia (conv.id = readerId)
-                    if (!conv.isGroup && 
-                        Number(senderId) === Number(user?.id) && 
-                        Number(conv.id) === Number(readerId)) {
-                        
-                        // console.log('✅', conv.name, 'đã đọc tin nhắn của mình');
-                        
+                    if (!conv.isGroup &&  Number(senderId) === Number(user?.id) &&  Number(conv.id) === Number(readerId)) {
                         return {
                             ...conv,
                             is_read: true,
@@ -309,7 +294,11 @@ function VibeConnect() {
     const totalUnread = conversations
         ?.filter(c => Number(c.unreadCount) > 0)
         ?.length || 0;
-
+        
+    // Hàm gọi nhóm để truyền xuống GroupChatBox
+    const startGroupCall = (group) => {
+        groupCallRef.current?.startGroupCall(group);
+    };
     return (
         <div className="min-h-screen bg-gray-50">
             <Header currentPage={currentPage} profile={profile} totalUnread={totalUnread} />
@@ -324,32 +313,95 @@ function VibeConnect() {
                     </div>
                 )}
             </div>
-
-            {/* Open Chats - Hiển thị từ phải sang trái */}
             <div className="fixed bottom-4 right-4 flex flex-row-reverse gap-3 z-50">
-                {openChats.map(chat => (
-                    chat.isGroup ? (
-                        <GroupChatBox
-                            key={`group-${chat.id}`}
-                            group={chat}
-                            closeChat={closeChat}
-                            user={profile}
-                        />
-                    ) : (
-                        <ChatBox
-                            key={`private-${chat.id}`}
-                            closeChat={closeChat}
-                            user={profile}
-                            friend={chat}
-                            startCall={receiverId => audioCallRef.current?.startCall(receiverId)}
-                            videoCall={receiverId => videoCallRef.current?.startCall(receiverId)}
-                        />
-                    )
-                ))}
+                {openChats
+                    .filter(chat => !chat.isMinimized)
+                    .map((chat, index, arr) => {
+                        const isLast = index === 0; // phần tử ngoài cùng bên phải
+                        return (
+                            <div key={`open-${chat.id}`} className={isLast ? "mr-20" : ""}>
+                                {chat.isGroup ? (
+                                    <GroupChatBox
+                                        group={chat}
+                                        closeChat={closeChat}
+                                        user={profile}
+                                        startGroupCall={startGroupCall}
+                                        onToggleMinimize={() => {
+                                            setOpenChats(prev => prev.map(c =>
+                                                c.id === chat.id ? { ...c, isMinimized: true } : c
+                                            ));
+                                        }}
+                                    />
+                                ) : (
+                                    <ChatBox
+                                        friend={chat}
+                                        closeChat={closeChat}
+                                        user={profile}
+                                        startCall={(id) => audioCallRef.current?.startCall(id)}
+                                        videoCall={(id) => videoCallRef.current?.startCall(id)}
+                                        isMinimized={false}
+                                        onToggleMinimize={() => {
+                                            setOpenChats(prev => prev.map(c =>
+                                                Number(c.id) === Number(chat.id)
+                                                    ? { ...c, isMinimized: true }
+                                                    : c
+                                            ));
+                                        }}
+                                    />
+                                )}
+                            </div>
+                        );
+                    })}
+            </div>
+            <div className="fixed bottom-14 right-6 flex flex-col-reverse gap-4 z-50">
+                {openChats
+                    .filter(chat => chat.isMinimized)
+                    .map((chat, index) => (
+                        <div
+                            key={`mini-${chat.id}`}
+                            className="relative group animate-in fade-in zoom-in duration-300"
+                            style={{
+                                animationDelay: `${index * 80}ms`,
+                                animationFillMode: 'backwards'
+                            }}
+                            onClick={() => {
+                                setOpenChats(prev =>
+                                    prev.map(c =>
+                                        Number(c.id) === Number(chat.id)
+                                            ? { ...c, isMinimized: false, unreadCount: 0 }
+                                            : c
+                                    )
+                                );
+                            }}
+                        >
+                            <div className="relative w-14 h-14 rounded-full overflow-hidden ring-4 ring-white shadow-2xl transition-all duration-300 group-hover:ring-blue-400 cursor-pointer">
+                                <img
+                                    src={chat.image_url ? src + chat.image_url : "https://cdn-icons-png.flaticon.com/512/4825/4825038.png"}
+                                    alt={chat.name || "User"}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            {chat.unreadCount > 0 && (
+                                <div className="absolute -top-2 -right-2 min-w-[24px] h-8 px-2 bg-gradient-to-br from-red-500 to-pink-600 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg border border-white/30 animate-pulse">
+                                    <span className="drop-shadow-md">
+                                        {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                                    </span>
+                                    <span className="absolute inset-0 rounded-full bg-white opacity-30 animate-ping"></span>
+                                </div>
+                            )}
+                            <div className="absolute top-1/2 right-full -translate-y-1/2 mr-8 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
+                                <div className="bg-black/80 text-white text-xs px-3 py-1.5 rounded-full whitespace-nowrap shadow-xl relative">
+                                    {chat.name || chat.displayName}
+                                    <div className="absolute top-1/2 -right-5 -translate-y-1/2 w-3 h-3 bg-black/80 rotate-45"></div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
             </div>
 
             <AudioCall ref={audioCallRef} user={user} />
             <VideoCall ref={videoCallRef} user={user} />
+            <AudioGroup ref={groupCallRef} user={user} /> 
         </div>
     );
 }

@@ -24,6 +24,7 @@ function route(app)
     app.use("/friends", authMiddleware, require("./Friend"))
     app.use("/reaction", authMiddleware, reactionRoutes)
     app.use("/comment", authMiddleware, comment)
+    app.use("/", authMiddleware, require("./fileRoutes"))
     // routes/user.routes.js hoặc auth.routes.js
 }
 

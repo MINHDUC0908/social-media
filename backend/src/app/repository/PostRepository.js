@@ -66,6 +66,29 @@ class PostRepository {
 
         return post;
     }
+
+    async getPostById(user_id) {
+        return await Post.findAll({
+            where: { user_id: user_id },
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                    attributes: ["name", "image_url"]
+                },
+                {
+                    model: PostMedia,
+                    as: "media",
+                    attributes: ["id", "media_url"]
+                },
+                {
+                    model: Reaction,
+                    as: "reactions",
+                    attributes: ["reaction_type", "user_id"]
+                }
+            ],
+        });
+    }
 }
 
 module.exports = new PostRepository();

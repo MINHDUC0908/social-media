@@ -46,7 +46,7 @@ function ChatGroupMessage( { messages, messagesEndRef, user})
                                 >
                                     {isFirstInGroup && !isCurrentUser && (
                                         <span className="text-sm text-gray-600 font-semibold mb-1 ml-10">
-                                            {msg.sender?.name ? msg.sender.name.split(" ").pop() : "Người dùng"}
+                                            {msg.sender?.name ? msg.sender.name : "Người dùng"}
                                         </span>
                                     )}
                                     <div className="flex items-end">

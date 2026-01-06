@@ -17,4 +17,6 @@ router.get("/:id", PostController.show);
 // Tạo bài viết (upload nhiều media)
 router.post("/", upload.array("media", 10), PostController.store);
 
+router.get("/post", PostController.getPostId);
+
 module.exports = router

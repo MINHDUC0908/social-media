@@ -11,52 +11,15 @@ const AudioCall = forwardRef(({ user }, ref) => {
     const [isInCall, setIsInCall] = useState(false);
     const [callDuration, setCallDuration] = useState(0);
     const [showEndCallScreen, setShowEndCallScreen] = useState(false);
-    const [currentReceiverId, setCurrentReceiverId] = useState(null); // ✅ Lưu receiverId hiện tại
-
-    // Nhạc chuông
-    const [isRinging, setIsRinging] = useState(false);
-
-    // HÀM PHÁT NHẠC CHUÔNG
-    const playRingtone = () => {
-        if (ringtoneRef.current) {
-            ringtoneRef.current.loop = false; // ❌ Không lặp, để có thể nghe "hết nhạc"
-            ringtoneRef.current.volume = 0.5;
-            ringtoneRef.current.currentTime = 0;
-            ringtoneRef.current.play().catch(err => {
-                console.log("Không thể phát ringtone:", err);
-            });
-            setIsRinging(true);
-
-            // ✅ Khi nhạc chuông phát xong mà vẫn chưa trong cuộc gọi -> tự ngắt
-            ringtoneRef.current.onended = () => {
-                console.log("🎵 Nhạc chuông kết thúc");
-                if (!isInCall && !isEndingCallRef.current) {
-                    console.log("📴 Người nhận không bắt máy - tự ngắt cuộc gọi");
-                    setCallStatus("Người nhận không bắt máy");
-                    hangUpCall(); // 🔹 Gọi hàm ngắt cuộc gọi
-                }
-            };
-        }
-    };
-
-    // 4. HÀM DỪNG NHẠC CHUÔNG
-    const stopRingtone = () => {
-        if (ringtoneRef.current) {
-            ringtoneRef.current.pause();
-            ringtoneRef.current.currentTime = 0; // Reset về đầu
-            setIsRinging(false);
-        }
-    };
+    const [currentReceiverId, setCurrentReceiverId] = useState(null);
 
     const isEndingCallRef = useRef(false);
     const callTimerRef = useRef(null);
     const callStartTimeRef = useRef(null);
     const localAudioRef = useRef();
     const remoteAudioRef = useRef();
-    const ringtoneRef = useRef(null);
     const { receiverInfo, fetchReceiver } = useUser();
 
-    // Cleanup khi unmount
     useEffect(() => {
         return () => {
             cleanupLocalOnly();
@@ -66,34 +29,24 @@ const AudioCall = forwardRef(({ user }, ref) => {
         };
     }, []);
 
-    // 🎧 Setup WebRTC listeners
     useEffect(() => {
         if (!user?.id) return;
 
         const userId = String(user.id);
         socket.emit("join", userId);
 
-        // Sự kiện nhận cuộc gọi
         socket.on("incoming-call", ({ from, offer }) => {
             console.log("📞 Có cuộc gọi đến từ userId:", from);
             setIncomingCall({ from, offer });
-            setCurrentReceiverId(from); // ✅ Set receiverId khi nhận cuộc gọi
+            setCurrentReceiverId(from);
             setShowCallModal(true);
             setCallStatus(`Cuộc gọi đến từ User ${from}`);
             isEndingCallRef.current = false;
-            
-            // ✅ Fetch thông tin người gọi
             fetchReceiver(from);
-
-            // Phát nhạc chuông 
-            playRingtone();
         });
 
-        // Khi đối phương chấp nhận
         socket.on("call-answered", async ({ from, answer }) => {
             console.log("✅ User", from, "đã chấp nhận cuộc gọi");
-            // Dừng nhạc chuông
-            stopRingtone();
             setCallStatus("Đang kết nối...");
             if (pc) {
                 await pc.setRemoteDescription(new RTCSessionDescription(answer));
@@ -101,7 +54,6 @@ const AudioCall = forwardRef(({ user }, ref) => {
             }
         });
 
-        // Khi nhận ICE candidate
         socket.on("ice-candidate", async ({ from, candidate }) => {
             try {
                 if (candidate && pc) {
@@ -113,7 +65,6 @@ const AudioCall = forwardRef(({ user }, ref) => {
             }
         });
 
-        // Khi cuộc gọi bị ngắt
         socket.on("call-ended", ({ from }) => {
             console.log("📴 Cuộc gọi bị ngắt bởi User", from);
             isEndingCallRef.current = true;
@@ -145,7 +96,6 @@ const AudioCall = forwardRef(({ user }, ref) => {
         };
     }, [pc, user]);
 
-    // 🎧 Hàm tạo kết nối WebRTC
     const createPeer = (targetId) => {
         const peer = new RTCPeerConnection({
             iceServers: [
@@ -195,7 +145,6 @@ const AudioCall = forwardRef(({ user }, ref) => {
         return peer;
     };
 
-    // 📞 Gọi thoại - ✅ Nhận receiverId từ parameter
     const startCall = async (receiverId) => {
         if (!receiverId || !user?.id) {
             console.error("❌ Thiếu receiverId hoặc user.id:", { receiverId, userId: user?.id });
@@ -205,12 +154,10 @@ const AudioCall = forwardRef(({ user }, ref) => {
 
         try {
             isEndingCallRef.current = false;
-            setCurrentReceiverId(receiverId); // ✅ Lưu receiverId
+            setCurrentReceiverId(receiverId);
             setShowCallModal(true);
             setCallStatus("Đang gọi...");
             setIsInCall(false);
-            
-            // ✅ Fetch thông tin người nhận
             fetchReceiver(receiverId);
             
             const peer = createPeer(receiverId);
@@ -242,10 +189,7 @@ const AudioCall = forwardRef(({ user }, ref) => {
         }
     };
 
-    // ✅ Chấp nhận cuộc gọi
     const acceptCall = async () => {
-        // Dừng nhạc chuông nếu đang reo
-        stopRingtone();
         if (!incomingCall) return;
 
         try {
@@ -281,10 +225,7 @@ const AudioCall = forwardRef(({ user }, ref) => {
         }
     };
 
-    // ❌ Từ chối cuộc gọi
     const rejectCall = () => {
-        // Dừng nhạc chuông nếu đang reo
-        stopRingtone();
         if (!incomingCall) return;
         
         isEndingCallRef.current = true;
@@ -304,12 +245,8 @@ const AudioCall = forwardRef(({ user }, ref) => {
         }, 500);
     };
 
-    // 📴 Ngắt cuộc gọi (chủ động)
     const hangUpCall = () => {
         console.log("📴 hangUpCall called, isEndingCallRef:", isEndingCallRef.current);
-
-        // Dừng nhạc chuông nếu đang reo
-        stopRingtone();
         
         if (isEndingCallRef.current) {
             console.log("⚠️ Already ending call, skip emit");
@@ -324,7 +261,6 @@ const AudioCall = forwardRef(({ user }, ref) => {
             callTimerRef.current = null;
         }
         
-        // ✅ Sử dụng currentReceiverId
         const targetReceiverId = currentReceiverId || incomingCall?.from;
         
         if (targetReceiverId) {
@@ -348,9 +284,7 @@ const AudioCall = forwardRef(({ user }, ref) => {
         }, 3000);
     };
 
-    // Cleanup local
     const cleanupLocalOnly = () => {
-        stopRingtone();
         if (pc) {
             pc.close();
             setPc(null);
@@ -365,14 +299,12 @@ const AudioCall = forwardRef(({ user }, ref) => {
         setIsInCall(false);
     };
 
-    // Format thời gian
     const formatDuration = (seconds) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    // Expose methods qua ref
     useImperativeHandle(ref, () => ({
         startCall,
         hangUpCall,
@@ -380,20 +312,11 @@ const AudioCall = forwardRef(({ user }, ref) => {
 
     return (
         <>
-            <audio 
-                ref={ringtoneRef} 
-                preload="auto"
-                style={{ display: 'none' }}
-            >
-                <source src="/sounds/ngaytetqueem.mp3" type="audio/mpeg" />
-            </audio>
-
             <div className="hidden">
                 <audio ref={localAudioRef} autoPlay muted />
                 <audio ref={remoteAudioRef} autoPlay playsInline />
             </div>
 
-            {/* Audio Elements cho cuộc gọi */}
             {showCallModal && (
                 <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-md"></div>
@@ -408,7 +331,6 @@ const AudioCall = forwardRef(({ user }, ref) => {
                             </button>
                             <div className="relative px-6 py-8">
                                 
-                                {/* ========== INCOMING CALL ========== */}
                                 {incomingCall && !isInCall && !showEndCallScreen && (
                                     <div className="space-y-6">
                                         <div className="flex flex-col items-center">
@@ -460,7 +382,6 @@ const AudioCall = forwardRef(({ user }, ref) => {
                                     </div>
                                 )}
 
-                                {/* ========== CALLING / IN CALL ========== */}
                                 {!incomingCall && !showEndCallScreen && (
                                     <div className="space-y-6">
                                         <div className="flex flex-col items-center">
@@ -513,13 +434,12 @@ const AudioCall = forwardRef(({ user }, ref) => {
                                     </div>
                                 )}
 
-                                {/* ========== END CALL SCREEN ========== */}
                                 {showEndCallScreen && (
                                     <div className="space-y-6 text-center">
                                         <div className="flex justify-center">
                                             <div className="w-24 h-24 bg-gradient-to-br from-slate-700 to-slate-800 rounded-full p-1 shadow-2xl">
                                                 <div className="w-full h-full bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-700">
-                                                    <FiPhoneOff size={36} className="text-slate-400" onClick={() => setShowEndCallScreen(false)} />
+                                                    <FiPhoneOff size={36} className="text-slate-400" />
                                                 </div>
                                             </div>
                                         </div>
@@ -542,7 +462,6 @@ const AudioCall = forwardRef(({ user }, ref) => {
                                 )}
                             </div>
 
-                            {/* Debug Panel */}
                             <div className="px-6 pb-6">
                                 <div className="bg-slate-700/30 backdrop-blur-sm border border-slate-600/30 rounded-xl px-3 py-2.5 space-y-1">
                                     <div className="flex justify-between text-xs">
@@ -564,12 +483,6 @@ const AudioCall = forwardRef(({ user }, ref) => {
                                         <span className="text-slate-300">{callStatus || "Idle"}</span>
                                     </div>
                                 </div>
-                            </div>
-
-                            {/* Audio Elements */}
-                            <div className="hidden">
-                                <audio ref={localAudioRef} autoPlay muted />
-                                <audio ref={remoteAudioRef} autoPlay playsInline />
                             </div>
                         </div>
                     </div>

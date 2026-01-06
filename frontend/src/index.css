@@ -77,3 +77,33 @@
     50% { transform: scale(1.2); opacity: 1; }
     100% { transform: scale(1); }
 }
+
+
+@keyframes fadeIn {
+    from { opacity: 0 }
+    to { opacity: 1 }
+}
+
+@keyframes scaleIn {
+    from { transform: scale(0.95); opacity: 0 }
+    to { transform: scale(1); opacity: 1 }
+}
+
+.animate-fadeIn {
+    animation: fadeIn .2s ease-out;
+}
+
+.animate-scaleIn {
+    animation: scaleIn .25s ease-out;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}

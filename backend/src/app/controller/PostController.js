@@ -1,6 +1,29 @@
 const PostService = require("../service/PostService");
 
 class PostController {
+    async getPostId(req, res) {
+        try {
+            const userId = req.user.id;
+            const post = await PostService.getPostId(userId);
+            if (!post) {
+                return res.status(404).json({
+                    status: false,
+                    message: "Không tìm thấy bài viết!"
+                });
+            }   
+            return res.json({
+                status: true,
+                data: post
+            });
+        } catch (err) {
+            return res.status(500).json({
+                status: false,
+                message: err.message,
+                userId: req.user.id
+            });
+        }
+    }
+
     async getFeed(req, res) {
         try {
             const userId = req.user.id;

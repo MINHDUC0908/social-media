@@ -67,6 +67,10 @@ class PostService
 
         return database;
     }
+
+    async getPostId(user_id) {
+        return await this.postRepository.getPostById(user_id);
+    }
 }
 
 module.exports = new PostService();

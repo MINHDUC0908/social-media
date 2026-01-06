@@ -47,7 +47,7 @@ function CommentItem({ comment, allComments, onReply, depth = 0 }) {
                 </div>
 
                 {/* Nội dung bình luận */}
-                <div className="flex-1 min-w-0 pb-3">
+                <div className="flex-1 min-w-0">
                     <div className="inline-block max-w-full">
                         <div className="bg-[#3a3b3c] rounded-2xl px-3 py-2 text-sm leading-snug">
                             <span className="font-medium text-white block">

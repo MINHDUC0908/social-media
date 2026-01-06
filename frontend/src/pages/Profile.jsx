@@ -6,7 +6,7 @@ import src from "../api/src";
 
 function Profile({ profile, setProfile }) 
 {
-    console.log(profile)
+    const { logout } = useAuth();
     const [showImageModal, setShowImageModal] = useState(false);
     const [previewImage, setPreviewImage] = useState("");
     const [uploading, setUploading] = useState(false);
@@ -99,12 +99,25 @@ function Profile({ profile, setProfile })
                                     <p className="text-gray-600">1.2K friends</p>
                                 </div>
                             </div>
-                            <div className="flex gap-2 pb-2">
-                                <button className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-md hover:bg-blue-700">
+                            <div className="flex flex-wrap gap-2 pb-2">
+                                <button type="button"
+                                    className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-md
+                                            hover:bg-blue-700 transition"
+                                >
                                     Add to story
                                 </button>
-                                <button className="px-4 py-2 bg-gray-200 text-gray-900 text-sm font-semibold rounded-md hover:bg-gray-300">
+                                <button type="button"
+                                    className="px-4 py-2 bg-gray-200 text-gray-900 text-sm font-semibold rounded-md
+                                            hover:bg-gray-300 transition"
+                                >
                                     Edit profile
+                                </button>
+
+                                <button type="button" onClick={logout}
+                                    className="px-4 py-2 bg-red-500 text-white text-sm font-semibold rounded-md
+                                            hover:bg-red-600 transition"
+                                >
+                                    Logout
                                 </button>
                             </div>
                         </div>
@@ -227,13 +240,13 @@ function Profile({ profile, setProfile })
                         {/* Create Post */}
                         <div className="bg-white rounded-lg shadow p-4">
                             <div className="flex items-center gap-3 mb-3">
-                                <img 
-                                    src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150" 
-                                    alt="Avatar" 
-                                    className="w-10 h-10 rounded-full"
+                                <img
+                                    src={src + profile?.image_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150"}
+                                    alt="Avatar"
+                                    className="w-10 h-10 rounded-full border-white cursor-pointer object-cover"
                                 />
                                 <button className="flex-1 text-left px-4 py-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
-                                    What's on your mind, John?
+                                    What's on your mind, {profile?.name || "User"}?
                                 </button>
                             </div>
                             <div className="border-t pt-3 flex justify-around">
@@ -278,10 +291,10 @@ function Profile({ profile, setProfile })
                         {/* Sample Post */}
                         <div className="bg-white rounded-lg shadow p-4">
                             <div className="flex items-center gap-3 mb-3">
-                                <img 
-                                    src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150" 
-                                    alt="Avatar" 
-                                    className="w-10 h-10 rounded-full"
+                                <img
+                                    src={src + profile?.image_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150"}
+                                    alt="Avatar"
+                                    className="w-10 h-10 rounded-full border-white cursor-pointer object-cover"
                                 />
                                 <div>
                                     <p className="font-semibold text-gray-900">John Doe</p>
