@@ -4,6 +4,8 @@ class PostController {
     async getPostId(req, res) {
         try {
             const userId = req.user.id;
+            console.log("🚀 Fetching posts for user ID:", userId);
+            
             const post = await PostService.getPostId(userId);
             if (!post) {
                 return res.status(404).json({
@@ -35,7 +37,7 @@ class PostController {
         }catch (err) {
             return res.status(500).json({
                 status: false,  
-                message: err.message
+                message: err.message,
             });
         }
     }

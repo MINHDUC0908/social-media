@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { FiCamera, FiImage } from "react-icons/fi";
 import { BsEmojiSmile } from "react-icons/bs";
-import { Send, ThumbsUp } from "lucide-react";
+import { Send, ThumbsUp, Mic, MicOff } from "lucide-react";
 import axios from "axios";
 import api from "../../api/api";
 import socket from "../../utils/socket";
@@ -13,9 +13,63 @@ export default function MessageInput({ userId, receiverId, onMessageSent, setCha
     const [uploadFile, setUploadFile] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
     const [progress, setProgress] = useState(0);
+
+    const [isListening, setIsListening] = useState(false); // Trạng thái ghi âm
     
     // Thêm ref riêng cho từng box
     const fileInputRef = useRef(null);
+    
+    const recognitionRef = useRef(null); // Lưu instance của speech recognition
+    // Khởi tạo Speech Recognition
+    const initSpeechRecognition = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            alert("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói!");
+            return null;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'vi-VN'; // Ngôn ngữ tiếng Việt
+        recognition.continuous = true; // Tiếp tục nghe
+        recognition.interimResults = true; // Hiển thị kết quả tạm thời
+
+        recognition.onresult = (event) => {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+            }
+            setInputValue(transcript);
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Lỗi nhận diện giọng nói:', event.error);
+            setIsListening(false);
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+        };
+
+        return recognition;
+    };
+
+    // Bắt đầu/dừng ghi âm
+    const toggleVoiceInput = () => {
+        if (!recognitionRef.current) {
+            recognitionRef.current = initSpeechRecognition();
+        }
+
+        if (!recognitionRef.current) return;
+
+        if (isListening) {
+            recognitionRef.current.stop();
+            setIsListening(false);
+        } else {
+            recognitionRef.current.start();
+            setIsListening(true);
+        }
+    };
 
     // Mở chọn file bằng cách click nút
     const openFilePicker = () => {
@@ -241,12 +295,12 @@ export default function MessageInput({ userId, receiverId, onMessageSent, setCha
 
             <form onSubmit={handleSendMessage} className="p-2 border-t bg-white rounded-b-lg">
                 <div className="flex items-center">
-                    <button
+                    {/* <button
                         type="button"
                         className="text-blue-500 p-2 hover:text-gray-700"
                     >
                         <FiCamera size={18} />
-                    </button>
+                    </button> */}
                     <button 
                         type="button" 
                         onClick={openFilePicker} 
@@ -267,6 +321,17 @@ export default function MessageInput({ userId, receiverId, onMessageSent, setCha
                         className="text-blue-500 p-2 hover:text-gray-700"
                     >
                         <BsEmojiSmile size={18} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={toggleVoiceInput}
+                        className={`p-2 rounded-full transition ${
+                            isListening 
+                                ? 'text-red-500 bg-red-100 animate-pulse' 
+                                : 'text-blue-500 hover:text-gray-700'
+                        }`}
+                    >
+                        {isListening ? <MicOff size={18} /> : <Mic size={18} />}
                     </button>
                     <div className="flex-1 bg-gray-100 rounded-full flex items-center px-3">
                         <input

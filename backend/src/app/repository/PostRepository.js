@@ -67,19 +67,19 @@ class PostRepository {
         return post;
     }
 
-    async getPostById(user_id) {
+    async getPostId(user_id) {
         return await Post.findAll({
             where: { user_id: user_id },
             include: [
-                {
-                    model: User,
-                    as: "user",
+                { 
+                    model: User, 
+                    as: "user" ,
                     attributes: ["name", "image_url"]
                 },
-                {
-                    model: PostMedia,
+                { 
+                    model: PostMedia, 
                     as: "media",
-                    attributes: ["id", "media_url"]
+                    attributes: ["media_url", "media_type"]
                 },
                 {
                     model: Reaction,
@@ -87,6 +87,7 @@ class PostRepository {
                     attributes: ["reaction_type", "user_id"]
                 }
             ],
+            order: [["created_at", "DESC"]]
         });
     }
 }

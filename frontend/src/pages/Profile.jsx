@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import axios from "axios";
 import api from "../api/api";
 import src from "../api/src";
+import { formatLastActive } from "../utils/format";
 
 function Profile({ profile, setProfile }) 
 {
@@ -10,6 +11,22 @@ function Profile({ profile, setProfile })
     const [showImageModal, setShowImageModal] = useState(false);
     const [previewImage, setPreviewImage] = useState("");
     const [uploading, setUploading] = useState(false);
+    const [posts, setPosts] = useState([]);
+    useEffect(() => {
+        const fetchPosts = async () => {
+            try {
+                const res = await axios.get(api + "posts/me", {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                });
+                setPosts(res.data.data);
+            } catch (err) {
+                console.error("Error fetching posts:", err);
+            }
+        };
+        fetchPosts();
+    }, [profile]);
     const handleAvatarChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -37,6 +54,7 @@ function Profile({ profile, setProfile })
         }
     };
 
+    console.log(posts)
     if (uploading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -290,36 +308,46 @@ function Profile({ profile, setProfile })
                         
                         {/* Sample Post */}
                         <div className="bg-white rounded-lg shadow p-4">
-                            <div className="flex items-center gap-3 mb-3">
-                                <img
-                                    src={src + profile?.image_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150"}
-                                    alt="Avatar"
-                                    className="w-10 h-10 rounded-full border-white cursor-pointer object-cover"
-                                />
-                                <div>
-                                    <p className="font-semibold text-gray-900">John Doe</p>
-                                    <p className="text-xs text-gray-500">2 hours ago · 🌍</p>
-                                </div>
-                            </div>
-                            <p className="text-gray-900 mb-3">
-                                Just finished an amazing project! 🚀 Feeling grateful for this incredible team.
-                            </p>
-                            <div className="h-96 bg-gray-200 rounded-md mb-3"></div>
-                            <div className="flex justify-between text-sm text-gray-600 mb-3 pb-3 border-b">
-                                <span>👍❤️😮 123</span>
-                                <span>45 comments · 12 shares</span>
-                            </div>
-                            <div className="flex justify-around">
-                                <button className="flex-1 py-2 hover:bg-gray-100 rounded-md text-gray-600 font-semibold text-sm">
-                                    👍 Like
-                                </button>
-                                <button className="flex-1 py-2 hover:bg-gray-100 rounded-md text-gray-600 font-semibold text-sm">
-                                    💬 Comment
-                                </button>
-                                <button className="flex-1 py-2 hover:bg-gray-100 rounded-md text-gray-600 font-semibold text-sm">
-                                    ↗️ Share
-                                </button>
-                            </div>
+                            {
+                                posts.length === 0 ? (
+                                    <p className="text-gray-600">No posts to display.</p>
+                                ) : (
+                                    posts.map((post) => (
+                                        <div>
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <img
+                                                    src={src + profile?.image_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150"}
+                                                    alt="Avatar"
+                                                    className="w-10 h-10 rounded-full border-white cursor-pointer object-cover"
+                                                />
+                                                <div>
+                                                    <p className="font-semibold text-gray-900">{post?.user.name}</p>
+                                                    <p className="text-xs text-gray-500">{formatLastActive(post?.created_at)}· 🌍</p>
+                                                </div>
+                                            </div>
+                                            <p className="text-gray-900 mb-3">
+                                                {post?.content}
+                                            </p>
+                                            <div className="h-96 bg-gray-200 rounded-md mb-3"></div>
+                                            <div className="flex justify-between text-sm text-gray-600 mb-3 pb-3 border-b">
+                                                <span>👍❤️😮 123</span>
+                                                <span>45 comments · 12 shares</span>
+                                            </div>
+                                            <div className="flex justify-around">
+                                                <button className="flex-1 py-2 hover:bg-gray-100 rounded-md text-gray-600 font-semibold text-sm">
+                                                    👍 Like
+                                                </button>
+                                                <button className="flex-1 py-2 hover:bg-gray-100 rounded-md text-gray-600 font-semibold text-sm">
+                                                    💬 Comment
+                                                </button>
+                                                <button className="flex-1 py-2 hover:bg-gray-100 rounded-md text-gray-600 font-semibold text-sm">
+                                                    ↗️ Share
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )
+                                ))
+                            }
                         </div>
                     </div>
                 </div>

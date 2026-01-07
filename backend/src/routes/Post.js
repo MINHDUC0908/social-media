@@ -8,15 +8,12 @@ const router = express.Router()
 // upload ảnh + video
 const upload = createUploader(path.join(__dirname, "../public/image/posts"), 'both');
 
-// Lấy danh sách bài viết
 router.get("/", PostController.getFeed);
 
-// Chi tiết 1 bài viết
+router.get("/me", PostController.getPostId);
+
 router.get("/:id", PostController.show);
 
-// Tạo bài viết (upload nhiều media)
 router.post("/", upload.array("media", 10), PostController.store);
-
-router.get("/post", PostController.getPostId);
 
 module.exports = router

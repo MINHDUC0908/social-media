@@ -71,7 +71,7 @@ function ChatList({ chat, user, messagesEndRef }) {
         }
     };
 
-    // 🔒 Format file size
+    // Format file size
     const formatFileSize = (bytes) => {
         if (!bytes) return '0 B';
         if (bytes < 1024) return bytes + ' B';

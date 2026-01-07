@@ -69,7 +69,7 @@ class PostService
     }
 
     async getPostId(user_id) {
-        return await this.postRepository.getPostById(user_id);
+        return await this.postRepository.getPostId(user_id);
     }
 }
 

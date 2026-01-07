@@ -1,4 +1,4 @@
-import { X, Minus, Send, Image, Smile, ThumbsUp, Phone } from 'lucide-react';
+import { X, Minus, Send, Image, Smile, ThumbsUp, Phone, MicOff, Mic } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import useGroup from "../../hooks/useGroup";
 import ChatGroupMessage from './ChatGroupMessage';
@@ -11,6 +11,59 @@ export function GroupChatBox({ group, closeChat, user, onToggleMinimize, startGr
     const [inputValue, setInputValue] = useState('');
     const messagesEndRef = useRef(null);
 
+    const [isListening, setIsListening] = useState(false); // Trạng thái ghi âm
+
+    const recognitionRef = useRef(null); // Lưu instance của speech recognition
+    // Khởi tạo Speech Recognition
+    const initSpeechRecognition = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            alert("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói!");
+            return null;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'vi-VN'; // Ngôn ngữ tiếng Việt
+        recognition.continuous = true; // Tiếp tục nghe
+        recognition.interimResults = true; // Hiển thị kết quả tạm thời
+
+        recognition.onresult = (event) => {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+            }
+            setInputValue(transcript);
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Lỗi nhận diện giọng nói:', event.error);
+            setIsListening(false);
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+        };
+
+        return recognition;
+    };
+
+    // Bắt đầu/dừng ghi âm
+    const toggleVoiceInput = () => {
+        if (!recognitionRef.current) {
+            recognitionRef.current = initSpeechRecognition();
+        }
+
+        if (!recognitionRef.current) return;
+
+        if (isListening) {
+            recognitionRef.current.stop();
+            setIsListening(false);
+        } else {
+            recognitionRef.current.start();
+            setIsListening(true);
+        }
+    };
     const isMinimizedRef = useRef(isMinimized);
     useEffect(() => {
         isMinimizedRef.current = isMinimized;
@@ -158,7 +211,17 @@ export function GroupChatBox({ group, closeChat, user, onToggleMinimize, startGr
                             <button type="button" className="text-blue-500 hover:bg-gray-100 p-2 rounded-full">
                                 <Smile size={18} />
                             </button>
-
+                            <button
+                                type="button"
+                                onClick={toggleVoiceInput}
+                                className={`p-2 rounded-full transition ${
+                                    isListening 
+                                        ? 'text-red-500 bg-red-100 animate-pulse' 
+                                        : 'text-blue-500 hover:text-gray-700'
+                                }`}
+                            >
+                                {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+                            </button>
                             <div className="flex-1 bg-gray-100 rounded-full flex items-center px-3">
                                 <input
                                     type="text"

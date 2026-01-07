@@ -26,8 +26,6 @@ router.post("/fcm-token", async (req, res) => {
         }
 
         await user.update({ fcm_token });
-
-        console.log("✅ FCM token saved successfully");
         res.json({ success: true, message: "FCM token saved" });
 
     } catch (error) {
@@ -65,7 +63,65 @@ router.get("/ai/list-models", async (req, res) => {
 });
 
 
-router.post("/ai/chat", async (req, res) => {
+router.post("/smart-reply", async (req, res) => {
+    const { message } = req.body;
+
+    if (!message) {
+        return res.status(400).json({ error: "Message is required" });
+    }
+
+    try {
+        const prompt = `Bạn là trợ lý gợi ý trả lời tin nhắn. 
+Tin nhắn nhận được: "${message}"
+
+Hãy đưa ra CHÍNH XÁC 3 câu trả lời ngắn gọn, tự nhiên và phù hợp với ngữ cảnh tiếng Việt.
+Mỗi câu không quá 8 từ.
+Trả về định dạng:
+1. [câu trả lời 1]
+2. [câu trả lời 2]
+3. [câu trả lời 3]`;
+
+        const response = await axios.post(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
+            {
+                contents: [
+                    {
+                        parts: [{ text: prompt }]
+                    }
+                ]
+            },
+            {
+                params: { 
+                    key: process.env.GEMINI_API_KEY
+                }
+            }
+        );
+
+        const aiText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!aiText) {
+            throw new Error("No response from AI");
+        }
+
+        // Parse kết quả thành array
+        const replies = aiText.split('\n')
+            .filter(line => line.match(/^\d\./))
+            .map(line => line.replace(/^\d\.\s*/, '').trim())
+            .slice(0, 3);
+
+        res.json({ replies });
+
+    } catch (error) {
+        console.error("❌ Smart Reply Error:", error.response?.data || error.message);
+        res.status(500).json({ 
+            error: "Smart reply failed",
+            replies: []
+        });
+    }
+});
+
+// Route AI Chat (route cũ của bạn)
+router.post("/chat", async (req, res) => {
     const { message } = req.body;
 
     if (!message) {
@@ -74,7 +130,7 @@ router.post("/ai/chat", async (req, res) => {
 
     try {
         const response = await axios.post(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
             {
                 contents: [
                     {
@@ -106,4 +162,4 @@ router.post("/ai/chat", async (req, res) => {
     }
 });
 
-module.exports = router
+module.exports = router;
